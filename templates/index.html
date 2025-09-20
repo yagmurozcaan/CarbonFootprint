@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Şişe Takip Sistemi</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet" />
+<style>
+* { box-sizing: border-box; }
+body {
+  font-family: 'Inter', Arial, sans-serif;
+  background: #f0f4f8;
+  margin: 0;
+  padding: 40px 20px;
+  color: #333;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+body::before {
+  content: "UCGE";
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 25vw;
+  font-weight: 900;
+  color: rgba(0,0,0,0.03);
+  z-index: 0;
+  pointer-events: none;
+  user-select: none;
+  white-space: nowrap;
+  text-align: center;
+  animation: floatText 20s infinite ease-in-out;
+}
+@keyframes floatText {
+  0% { transform: translate(-50%, -50%) rotate(-3deg); }
+  50% { transform: translate(-50%, -50%) rotate(3deg); }
+  100% { transform: translate(-50%, -50%) rotate(-3deg); }
+}
+a.logout, a.user_logout {
+  position: fixed;
+  top: 20px;
+  background: #ff4d4f;
+  color: white;
+  padding: 10px 18px;
+  border-radius: 6px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.3s ease;
+  box-shadow: 0 3px 6px rgba(255,77,79,0.4);
+  z-index: 1;
+}
+a.logout { right: 20px; }
+a.logout:hover { background: #d9363e; }
+a.user_logout { right: 200px; background:#ff7043; }
+a.user_logout:hover { background:#ff5722; }
+
+h1 {
+  font-weight: 700;
+  font-size: 2.4rem;
+  margin-bottom: 30px;
+  color: #222;
+  text-align: center;
+  position: relative;
+  z-index: 1;
+}
+
+form#bottleForm {
+  background: #fff;
+  padding: 25px 30px;
+  border-radius: 12px;
+  box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+  max-width: 420px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin-bottom: 40px;
+  transition: box-shadow 0.3s ease;
+  position: relative;
+  z-index: 1;
+}
+form#bottleForm:hover { box-shadow: 0 8px 20px rgba(0,0,0,0.15); }
+
+select, input[type="number"] {
+  padding: 14px 16px;
+  font-size: 16px;
+  border: 2px solid #ccc;
+  border-radius: 8px;
+  transition: border-color 0.3s ease;
+  outline-offset: 2px;
+}
+select:focus, input[type="number"]:focus { border-color: #2196F3; outline: none; }
+
+button[type="submit"] {
+  background-color: #2196F3;
+  color: white;
+  font-weight: 700;
+  font-size: 18px;
+  border: none;
+  border-radius: 10px;
+  padding: 14px;
+  cursor: pointer;
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+  box-shadow: 0 6px 12px rgba(33,150,243,0.4);
+}
+button[type="submit"]:hover { background-color: #1976d2; box-shadow: 0 8px 16px rgba(25,118,210,0.6); }
+button[type="submit"]:focus { outline: none; box-shadow: 0 0 0 3px #90caf9; }
+
+#status { font-weight: 600; font-size: 1.1rem; margin-bottom: 20px; min-height: 24px; text-align: center; position: relative; z-index:1; }
+#stats { font-size: 1.2rem; text-align: center; margin-bottom: 35px; color: #555; position: relative; z-index:1; }
+
+#slidesContainer { position: relative; width: 100%; max-width: 960px; min-height: 450px; z-index: 1; overflow: hidden; }
+
+.slide { position: absolute; width: 100%;opacity: 0; transition: opacity 0.8s ease; top: 0; left: 0; z-index: 1;}
+.slide.active { opacity: 1; z-index: 1;}
+
+#prevSlide, #nextSlide {
+  z-index: 10;
+}
+
+#dailyWeeklyStats { display: flex; justify-content: center; gap: 50px; flex-wrap: wrap; }
+#dailyStats, #weeklyStats {
+  background: white; padding: 25px 35px; border-radius: 14px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.08); min-width: 220px; font-weight: 600; color: #444;
+  font-size: 1.1rem; text-align: center; user-select: none; transition: transform 0.3s ease;
+}
+#dailyStats:hover, #weeklyStats:hover { transform: translateY(-6px); box-shadow: 0 12px 25px rgba(0,0,0,0.12); }
+#dailyStats strong, #weeklyStats strong { display: block; font-size: 1.3rem; margin-bottom: 14px; color: #222; }
+
+#chartsContainer { display: flex; justify-content: center; gap: 60px; flex-wrap: wrap; min-height: 450px; }
+canvas { background: white; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); width: 100% !important; max-width: 420px !important; height: 400px !important; }
+
+table { width: 100%; max-width: 900px; border-collapse: collapse; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.1); background-color: white; user-select: none; }
+thead { background-color: #2196F3; color: white; font-weight: 600; font-size: 1rem; }
+th, td { padding: 16px 14px; text-align: center; border-bottom: 1px solid #e1e4e8; }
+tbody tr:hover { background-color: #e3f2fd; }
+
+#prevSlide, #nextSlide {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  font-size: 2rem; background: rgba(0,0,0,0.1); color: #333; border: none;
+  border-radius: 50%; width: 50px; height: 50px; cursor: pointer; z-index: 2;
+}
+#prevSlide { left: 10px; }
+#nextSlide { right: 10px; }
+#prevSlide:hover, #nextSlide:hover { background: rgba(0,0,0,0.2); }
+
+@media (max-width: 720px) {
+  #dailyWeeklyStats { flex-direction: column; gap: 25px; }
+  #chartsContainer { flex-direction: column; gap: 35px; }
+  form#bottleForm { max-width: 100%; }
+  table { font-size: 0.9rem; }
+}
+header img { max-width: 400px; height: auto; margin-bottom: 30px; position: relative; z-index:1; } 
+</style>
+</head>
+<body>
+<header><img src="/static/revego.png" alt="Şirket Logo"></header>
+<a href="{{ url_for('admin_bp.admin_login') }}" class="logout">Admin Girişi</a>
+<a href="{{ url_for('user.logout') }}" class="user_logout">Çıkış Yap</a>
+
+<h1>Şişe Takip ve Karbon Ayak İzi Sistemi</h1>
+
+<form id="bottleForm">
+  <select id="bottleType" aria-label="Şişe Türü Seçiniz">
+    <option value="cam">Cam</option>
+    <option value="alüminyum">Alüminyum</option>
+    <option value="plastik">Plastik</option>
+  </select>
+  <input type="number" id="quantity" min="1" value="1" required aria-label="Adet Giriniz" />
+  <button type="submit" aria-label="Gönder">Gönder</button>
+</form>
+
+<div id="status" role="alert" aria-live="polite"></div>
+
+<div id="slidesContainer">
+  <button id="prevSlide" aria-label="Önceki Slide">&#10094;</button>
+  <button id="nextSlide" aria-label="Sonraki Slide">&#10095;</button>
+
+  <div class="slide active">
+    <div id="stats" aria-live="polite"></div>
+    <div id="dailyWeeklyStats" aria-label="Günlük ve Haftalık Değişimler">
+      <div id="dailyStats" tabindex="0">
+        <strong>Günlük Değişimler</strong>
+        <div>Şişe Adedi: <span id="dailyQuantity">0</span></div>
+        <div>Karbon Ayak İzi: <span id="dailyCarbon">0.00</span> kg CO₂</div>
+      </div>
+      <div id="weeklyStats" tabindex="0">
+        <strong>Haftalık Değişimler</strong>
+        <div>Şişe Adedi: <span id="weeklyQuantity">0</span></div>
+        <div>Karbon Ayak İzi: <span id="weeklyCarbon">0.00</span> kg CO₂</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="slide">
+    <div id="chartsContainer" aria-label="Grafikler">
+      <canvas id="bottleChart" role="img" aria-label="Şişe Türlerine Göre Dağılım Grafiği"></canvas>
+      <canvas id="carbonChart" role="img" aria-label="Şişe Türlerine Göre Karbon Ayak İzi Grafiği"></canvas>
+    </div>
+  </div>
+
+  <div class="slide">
+    <h2>Tüm Şişe Kayıtları</h2>
+    <table aria-label="Tüm Şişe Kayıtları Tablosu">
+      <thead>
+        <tr>
+          <th>Şişe Türü</th>
+          <th>Adet</th>
+          <th>Karbon Ayak İzi (kg CO₂)</th>
+          <th>Tarih</th>
+        </tr>
+      </thead>
+      <tbody id="allBottlesTableBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+const API_KEY = "admin123";
+const form = document.getElementById("bottleForm");
+const status = document.getElementById("status");
+window.bottleChart = null;
+window.carbonChart = null;
+
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const bottleType = document.getElementById("bottleType").value;
+  const quantity = parseInt(document.getElementById("quantity").value);
+
+  const response = await fetch("/api/add_bottle", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-api-key": API_KEY },
+    body: JSON.stringify({ bottle_type: bottleType, quantity: quantity })
+  });
+
+  if (response.ok) {
+    status.textContent = "Kayıt başarıyla eklendi!";
+    status.style.color = "blue";
+    await loadAllData();
+  } else {
+    status.textContent = "Hata oluştu!";
+    status.style.color = "red";
+  }
+});
+
+async function loadStats() {
+  const res = await fetch("/api/stats", { headers: { "x-api-key": API_KEY } });
+  if(res.ok) {
+    const data = await res.json();
+    const totalBottles = data.total_bottles || 0;
+    const totalCarbon = data.total_carbon || 0;
+    document.getElementById("stats").textContent = `Toplam Şişe: ${totalBottles}, Toplam Karbon Ayak İzi: ${totalCarbon.toFixed(2)} kg CO2`;
+  }
+}
+
+async function loadDailyWeeklyStats() {
+  const dailyRes = await fetch("/api/daily_stats", { headers: { "x-api-key": API_KEY } });
+  if(dailyRes.ok) {
+    const dailyData = await dailyRes.json();
+    document.getElementById("dailyQuantity").textContent = dailyData.total_quantity || 0;
+    document.getElementById("dailyCarbon").textContent = (dailyData.total_carbon || 0).toFixed(2);
+  }
+  const weeklyRes = await fetch("/api/weekly_stats", { headers: { "x-api-key": API_KEY } });
+  if(weeklyRes.ok) {
+    const weeklyData = await weeklyRes.json();
+    document.getElementById("weeklyQuantity").textContent = weeklyData.total_bottles || 0;
+    document.getElementById("weeklyCarbon").textContent = (weeklyData.total_carbon || 0).toFixed(2);
+  }
+}
+
+async function loadChart() {
+  const res = await fetch("/chart/chart_data", { headers: { "x-api-key": API_KEY } });
+  if(res.ok){
+    const data = await res.json();
+    const ctx = document.getElementById("bottleChart").getContext("2d");
+    const labels = data.map(d => d.bottle_type);
+    const quantities = data.map(d => Number(d.total_quantity));
+    if(window.bottleChart instanceof Chart) window.bottleChart.destroy();
+    window.bottleChart = new Chart(ctx,{
+      type:"doughnut",
+      data:{ labels, datasets:[{ label:"Şişe Dağılımı", data:quantities, backgroundColor:["#42a5f5", "#ffb74d", "#66bb6a"] }] },
+      options:{
+        responsive:true,
+        maintainAspectRatio:false, // <- önemli
+        plugins:{ title:{ display:true, text:'Şişe Türlerine Göre Dağılım (Adet)' }, legend:{ position:'bottom' } },
+        layout:{ padding:20 }
+      }
+    });
+  }
+}
+
+async function loadCarbonChart() {
+  const res = await fetch("/chart/carbon_by_type", { headers: { "x-api-key": API_KEY } });
+  if(res.ok){
+    const data = await res.json();
+    const ctx = document.getElementById("carbonChart").getContext("2d");
+    const labels = data.map(d => d.bottle_type);
+    const carbonData = data.map(d => Number(d.total_carbon));
+    if(window.carbonChart instanceof Chart) window.carbonChart.destroy();
+    window.carbonChart = new Chart(ctx,{
+      type:"doughnut",
+      data:{ labels, datasets:[{ label:"Karbon Ayak İzi Dağılımı", data:carbonData, backgroundColor:["#42a5f5", "#ffb74d", "#66bb6a"] }] },
+      options:{
+        responsive:true,
+        maintainAspectRatio:false, // <- önemli
+        plugins:{ title:{ display:true, text:'Şişe Türlerine Göre Karbon Ayak İzi (kg CO₂)' }, legend:{ position:'bottom' } },
+        layout:{ padding:20 }
+      }
+    });
+  }
+}
+
+async function loadAllBottlesTable() {
+  const res = await fetch("/api/all_bottles", { headers: { "x-api-key": API_KEY } });
+  if(!res.ok) return;
+  const data = await res.json();
+  const tbody = document.getElementById("allBottlesTableBody");
+  tbody.innerHTML = "";
+  data.forEach(entry => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${entry.bottle_type}</td><td>${entry.quantity}</td><td>${entry.carbon_footprint.toFixed(2)}</td><td>${new Date(entry.created_at).toLocaleString()}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+async function loadAllData(){
+  await loadStats();
+  await loadDailyWeeklyStats();
+  await loadChart();
+  await loadCarbonChart();
+  await loadAllBottlesTable();
+}
+
+loadAllData();
+setInterval(loadAllData,10000);
+
+// Slide yönetimi
+const slides = document.querySelectorAll(".slide");
+let currentSlide = 0;
+let slideInterval = setInterval(nextSlide, 7000);
+
+function showSlide(index) {
+  slides.forEach(s => s.classList.remove("active"));
+  currentSlide = (index + slides.length) % slides.length;
+  slides[currentSlide].classList.add("active");
+}
+
+function nextSlide() { showSlide(currentSlide + 1); }
+function prevSlide() { showSlide(currentSlide - 1); }
+
+document.getElementById("nextSlide").addEventListener("click", () => { nextSlide(); resetAutoSlide(); });
+document.getElementById("prevSlide").addEventListener("click", () => { prevSlide(); resetAutoSlide(); });
+
+document.addEventListener("keydown", e => {
+  if(e.key==="ArrowLeft") prevSlide();
+  if(e.key==="ArrowRight") nextSlide();
+});
+
+function resetAutoSlide() { clearInterval(slideInterval); slideInterval = setInterval(nextSlide, 7000); }
+</script>
+</body>
+</html>
