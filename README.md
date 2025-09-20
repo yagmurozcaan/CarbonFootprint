@@ -25,11 +25,4 @@
     - `.env` ile yapılandırılmış gizli bilgiler
     - Mobil uyumlu ve ölçeklenebilir tasarım
 
----
 
-## 🛠️ Katkıda Bulunma
-
-1. Depoyu çatallayın (fork)
-2. Yeni bir dal (branch) oluşturun
-3. Değişikliklerinizi commit edin
-4. Pull request (PR) gönderin
